@@ -86,38 +86,38 @@ jobs:
         bundles: ${{ steps.get-bundles.outputs.bundles }}
 
     - name: Push data.json to GitHub
-    if: ${{ steps.get-version.outputs.version != '' && steps.get-url.outputs.url != '' && steps.get-bundles.outputs.bundles != '' }}
-    uses: actions/github-script@v6
-    with:
-    script: |
-        const { version } = process.env
-        const { bundles } = process.env
-        const path = 'data.json'
+      if: ${{ steps.get-version.outputs.version != '' && steps.get-url.outputs.url != '' && steps.get-bundles.outputs.bundles != '' }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+            const { version } = process.env
+            const { bundles } = process.env
+            const path = 'data.json'
 
-        // Get existing content
-        let content = {}
-        const { data } = await github.rest.repos.getContent({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        path  
-        })
-
-        // Update version 
-        const datapack = {
-          "snapshot": "${{ steps.get-version.outputs.version }}",
-          "server_jar": "${{ steps.get-url.outputs.url }}",
-          "bundles": "${{ steps.get-bundles.outputs.bundles }}"
-        }
-
-        // Stringify new JSON
-        const updatedDatapack = Buffer.from(JSON.stringify(datapack)).toString('base64')
-
-        // Commit update
-        github.rest.repos.createOrUpdateFileContents({
+            // Get existing content
+            let content = {}
+            const { data } = await github.rest.repos.getContent({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            path,
-            sha: data.sha,
-            message: 'Updating data.json for Snapshot ${{ steps.get-version.outputs.version }}',
-            content: updatedDatapack 
-        })
+            path  
+            })
+
+            // Update version 
+            const datapack = {
+              "snapshot": "${{ steps.get-version.outputs.version }}",
+              "server_jar": "${{ steps.get-url.outputs.url }}",
+              "bundles": "${{ steps.get-bundles.outputs.bundles }}"
+            }
+
+            // Stringify new JSON
+            const updatedDatapack = Buffer.from(JSON.stringify(datapack)).toString('base64')
+
+            // Commit update
+            github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path,
+                sha: data.sha,
+                message: 'Updating data.json for Snapshot ${{ steps.get-version.outputs.version }}',
+                content: updatedDatapack 
+            })
