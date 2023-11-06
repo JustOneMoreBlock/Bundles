@@ -2,7 +2,7 @@ name: Initial Enabled Packs
 
 on:
   schedule:
-    - cron: '* * * * *'
+    - cron: '0 * * * 3'
   push:
     branches: [ "main" ]
   pull_request:
