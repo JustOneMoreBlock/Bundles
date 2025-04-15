@@ -46,7 +46,7 @@ jobs:
       - name: Get Bundles
         id: get-bundles
         run: |
-          BUNDLES=$(ls data/minecraft/datapacks/ | paste -sd ", " -)
+          BUNDLES=$(ls --format=commas data/minecraft/datapacks/)
           echo "bundles=$BUNDLES" >> $GITHUB_OUTPUT
 
       - name: Push bundles.txt to GitHub
