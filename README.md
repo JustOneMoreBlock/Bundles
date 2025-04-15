@@ -65,6 +65,7 @@ This workflow was originally mined and crafted by hand — no AI, just pure pick
 But like every good redstone contraption, it eventually broke in mysterious and spectacular fashion.
 
 After a few too many failed attempts to debug it (and no diamonds in sight), we rage-quit to creative mode and summoned an AI assistant.
+
 📎 If Microsoft ever brings back Clippy, he’d probably pop up and say:
 “It looks like you're trying to fix your broken Minecraft workflow. Need some help?”
 
