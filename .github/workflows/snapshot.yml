@@ -2,122 +2,112 @@ name: Initial Enabled Packs
 
 on:
   schedule:
-    - cron: '* * * * 3'
+    - cron: '0 0 * * 3'  # Every Wednesday at midnight
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
-
   initial-enabled-packs:
     permissions: write-all
     runs-on: ubuntu-latest
 
     steps:
-    
-    - name: Latest Snapshot Version
-      id: get-version
-      run: |
-        echo "::group::Get version"
-        VERSION=$(curl -s https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r '.latest.snapshot')
-        echo "version=$VERSION" >> $GITHUB_ENV
-        echo "::set-output name=version::$VERSION"
-        echo "::endgroup::"
-        
-    - name: Server JAR URL
-      id: get-url
-      run: |
-        echo "::group::Get URL"
-        URL=$(curl -s https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r ".versions[] | select(.id == \"${{ steps.get-version.outputs.version }}\") | .url" | xargs -I{} curl -s {} | jq -r '.downloads.server.url')
-        echo ${{ steps.get-version.outputs.version }}
-        echo "url=$URL" >> $GITHUB_OUTPUT
-        echo "::endgroup::"
-        
-    - name: Download Server JAR
-      run: |
-        curl -L ${{ steps.get-url.outputs.url }} -o ${{ steps.get-version.outputs.version }}.jar
+      - name: Latest Snapshot Version
+        id: get-version
+        run: |
+          echo "::group::Get version"
+          VERSION=$(curl -s https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r '.latest.snapshot')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
 
-    - name: Extract Downloaded JAR
-      run: |
-        unzip -o ${{ steps.get-version.outputs.version }}.jar
+      - name: Server JAR URL
+        id: get-url
+        run: |
+          echo "::group::Get URL"
+          URL=$(curl -s https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r ".versions[] | select(.id == \"${{ steps.get-version.outputs.version }}\") | .url" | xargs -I{} curl -s {} | jq -r '.downloads.server.url')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
 
-    - name: Extract Server JAR
-      run: |
-        unzip -o META-INF/versions/${{ steps.get-version.outputs.version }}/server-${{ steps.get-version.outputs.version }}.jar
-        mkdir -p data/minecraft/datapacks/vanilla/
+      - name: Download Server JAR
+        run: |
+          curl -L ${{ steps.get-url.outputs.url }} -o ${{ steps.get-version.outputs.version }}.jar
 
-    - name: Get Bundles 
-      id: get-bundles
-      run: |
-        BUNDLES=$(ls --format=commas data/minecraft/datapacks/)
-        echo "version=$BUNDLES" >> $GITHUB_ENV
-        echo "::set-output name=bundles::$BUNDLES"
-        
-    - name: Push bundles.txt to GitHub
-      if: ${{ steps.get-bundles.outputs.bundles != '' }}
-      uses: actions/github-script@v6
-      with: 
-        script: |
-          const { version } = process.env
-          const { bundles } = process.env
-          const path = 'bundles.txt'
+      - name: Extract Downloaded JAR
+        run: |
+          unzip -o ${{ steps.get-version.outputs.version }}.jar
 
-          // Get existing content
-          const { data } = await github.rest.repos.getContent({
-          owner: context.repo.owner, 
-          repo: context.repo.repo,
-          path   
-          })
+      - name: Extract Server JAR
+        run: |
+          unzip -o META-INF/versions/${{ steps.get-version.outputs.version }}/server-${{ steps.get-version.outputs.version }}.jar
+          mkdir -p data/minecraft/datapacks/vanilla/
 
-          // Update content
-          const updatedContent = Buffer.from(version).toString('base64')
+      - name: Get Bundles
+        id: get-bundles
+        run: |
+          BUNDLES=$(ls data/minecraft/datapacks/ | paste -sd "," -)
+          echo "bundles=$BUNDLES" >> $GITHUB_OUTPUT
 
-          // Commit update
-          github.rest.repos.createOrUpdateFileContents({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            path,
-            sha: data.sha,
-            message: 'Updating bundles.txt for Snapshot: ${{ steps.get-version.outputs.version }}',
-            content: updatedContent
-          })
-      env:
-        bundles: ${{ steps.get-bundles.outputs.bundles }}
+      - name: Push bundles.txt to GitHub
+        if: ${{ steps.get-bundles.outputs.bundles != '' }}
+        uses: actions/github-script@v6
+        with: 
+          script: |
+            const path = 'bundles.txt';
+            const { version, bundles } = process.env;
 
-    - name: Push data.json to GitHub
-      if: ${{ steps.get-version.outputs.version != '' && steps.get-url.outputs.url != '' && steps.get-bundles.outputs.bundles != '' }}
-      uses: actions/github-script@v6
-      with:
-        script: |
-            const { version } = process.env
-            const { bundles } = process.env
-            const path = 'data.json'
-
-            // Get existing content
-            let content = {}
             const { data } = await github.rest.repos.getContent({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            path  
-            })
+              owner: context.repo.owner, 
+              repo: context.repo.repo,
+              path
+            });
 
-            // Update version 
+            const updatedContent = Buffer.from(bundles).toString('base64');
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              sha: data.sha,
+              message: `Updating bundles.txt for Snapshot: ${version}`,
+              content: updatedContent
+            });
+        env:
+          version: ${{ steps.get-version.outputs.version }}
+          bundles: ${{ steps.get-bundles.outputs.bundles }}
+
+      - name: Push data.json to GitHub
+        if: ${{ steps.get-version.outputs.version != '' && steps.get-url.outputs.url != '' && steps.get-bundles.outputs.bundles != '' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const path = 'data.json';
+            const { version, url, bundles } = process.env;
+
             const datapack = {
-              "snapshot": "${{ steps.get-version.outputs.version }}",
-              "server_jar": "${{ steps.get-url.outputs.url }}",
-              "bundles": "${{ steps.get-bundles.outputs.bundles }}"
-            }
+              snapshot: version,
+              server_jar: url,
+              bundles: bundles
+            };
 
-            // Stringify new JSON
-            const updatedDatapack = Buffer.from(JSON.stringify(datapack)).toString('base64')
+            const newContent = Buffer.from(JSON.stringify(datapack, null, 2)).toString('base64');
 
-            // Commit update
-            github.rest.repos.createOrUpdateFileContents({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                path,
-                sha: data.sha,
-                message: 'Updating data.json for Snapshot ${{ steps.get-version.outputs.version }}',
-                content: updatedDatapack 
-            })
+            const { data } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path
+            });
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              sha: data.sha,
+              message: `Updating data.json for Snapshot ${version}`,
+              content: newContent
+            });
+        env:
+          version: ${{ steps.get-version.outputs.version }}
+          url: ${{ steps.get-url.outputs.url }}
+          bundles: ${{ steps.get-bundles.outputs.bundles }}
