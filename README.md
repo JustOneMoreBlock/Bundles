@@ -60,6 +60,8 @@ A JSON file containing metadata about the last snapshot version processed by the
 🤝 Contributing
 Pull requests and suggestions are welcome! If you have ideas on improving the workflow or want to integrate other types of metadata, feel free to open an issue or fork this repository.
 
+---
+
 🙃 Original Credit & AI Assistance (Because Redstone is Hard)
 This workflow was originally mined and crafted by hand — no AI, just pure pickaxe power.
 But like every good redstone contraption, it eventually broke in mysterious and spectacular fashion.
