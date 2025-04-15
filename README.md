@@ -36,6 +36,7 @@ A JSON file containing metadata about the last snapshot version processed by the
   "server_jar": "https://piston-data.mojang.com/v1/objects/3d8223843a659d8ebc33459864ba02b34485ea11/server.jar",
   "bundles": "locator_bar,minecart_improvements,redstone_experiments,trade_rebalance,vanilla"
 }
+```
 
 ⚙️ Technology Stack
 - GitHub Actions — CI automation
