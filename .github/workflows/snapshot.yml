@@ -2,7 +2,7 @@ name: Initial Enabled Packs
 
 on:
   schedule:
-    - cron: '0 0 * * 3'  # Every Wednesday at midnight
+    - cron: '*/15 * * * *'  # Every 15 minutes
   push:
     branches: [ "main" ]
   pull_request:
@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Latest Snapshot Version
         id: get-version
         run: |
@@ -22,7 +23,33 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "::endgroup::"
 
+      - name: Check if Snapshot is Already Processed
+        id: check-version
+        run: |
+          echo "::group::Compare snapshot version"
+
+          SNAPSHOT=${{ steps.get-version.outputs.version }}
+          DATA_URL="https://api.github.com/repos/${{ github.repository }}/contents/data.json"
+
+          STORED=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                       -H "Accept: application/vnd.github.v3.raw" \
+                       "$DATA_URL" | jq -r '.snapshot')
+
+          echo "Fetched snapshot from Mojang: $SNAPSHOT"
+          echo "Snapshot in data.json: $STORED"
+
+          if [ "$SNAPSHOT" = "$STORED" ]; then
+            echo "No update needed."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "New snapshot detected."
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "::endgroup::"
+
       - name: Server JAR URL
+        if: ${{ steps.check-version.outputs.skip == 'false' }}
         id: get-url
         run: |
           echo "::group::Get URL"
@@ -31,26 +58,30 @@ jobs:
           echo "::endgroup::"
 
       - name: Download Server JAR
+        if: ${{ steps.check-version.outputs.skip == 'false' }}
         run: |
           curl -L ${{ steps.get-url.outputs.url }} -o ${{ steps.get-version.outputs.version }}.jar
 
       - name: Extract Downloaded JAR
+        if: ${{ steps.check-version.outputs.skip == 'false' }}
         run: |
           unzip -o ${{ steps.get-version.outputs.version }}.jar
 
       - name: Extract Server JAR
+        if: ${{ steps.check-version.outputs.skip == 'false' }}
         run: |
           unzip -o META-INF/versions/${{ steps.get-version.outputs.version }}/server-${{ steps.get-version.outputs.version }}.jar
           mkdir -p data/minecraft/datapacks/vanilla/
 
       - name: Get Bundles
+        if: ${{ steps.check-version.outputs.skip == 'false' }}
         id: get-bundles
         run: |
           BUNDLES=$(ls data/minecraft/datapacks/ | paste -sd "," -)
           echo "bundles=$BUNDLES" >> $GITHUB_OUTPUT
 
       - name: Push bundles.txt to GitHub
-        if: ${{ steps.get-bundles.outputs.bundles != '' }}
+        if: ${{ steps.check-version.outputs.skip == 'false' }}
         uses: actions/github-script@v6
         with: 
           script: |
@@ -78,7 +109,7 @@ jobs:
           bundles: ${{ steps.get-bundles.outputs.bundles }}
 
       - name: Push data.json to GitHub
-        if: ${{ steps.get-version.outputs.version != '' && steps.get-url.outputs.url != '' && steps.get-bundles.outputs.bundles != '' }}
+        if: ${{ steps.check-version.outputs.skip == 'false' }}
         uses: actions/github-script@v6
         with:
           script: |
