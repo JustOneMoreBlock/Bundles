@@ -1,5 +1,5 @@
 {
-  "snapshot": "1.21.11",
-  "server_jar": "https://piston-data.mojang.com/v1/objects/64bb6d763bed0a9f1d632ec347938594144943ed/server.jar",
+  "snapshot": "26.1-snapshot-1",
+  "server_jar": "https://piston-data.mojang.com/v1/objects/99786473e61ff6fcf0df4db9e0d6c9012c196116/server.jar",
   "bundles": "minecart_improvements,redstone_experiments,trade_rebalance,vanilla"
 }
